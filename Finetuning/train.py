@@ -34,7 +34,10 @@ class VGG(chainer.Chain):
 	def __init__(self,classLabels=7,pretrainedModel= '/home/yusuke/github/chainerModel/vgg16.npz'):
 		super(VGG,self).__init__()
 		with self.init_scope():
-			self.base = BaseVGG
+			self.base = BaseVGG()
+			self.conv5_1 = L.Convolution2D(512, 512, 3, 1, 1)
+			self.conv5_2 = L.Convolution2D(512, 512, 3, 1, 1)
+			self.conv5_3 = L.Convolution2D(512, 512, 3, 1, 1)
 			self.fc6 = L.Linear(None,512)
 			self.fc7 = L.Linear(None,128)
 			self.fc8 = L.Linear(None,classLabels)
@@ -43,10 +46,15 @@ class VGG(chainer.Chain):
 	def __call__(self,x,t):
 		h = self.predict(x)
 		loss = F.softmax_cross_entropy(h, t)
+		chainer.report({'loss': loss, 'accuracy': F.accuracy(h, t)}, self)
 		return loss
 
 	def predict(self,x):
 		h = self.base(x)
+		h = F.relu(self.conv5_1(h))
+		h = F.relu(self.conv5_2(h))
+		h = F.relu(self.conv5_3(h))
+		h = F.max_pooling_2d(h, ksize=2, stride=2)
 		h = F.dropout(F.relu(self.fc6(h)))
 		h = F.dropout(F.relu(self.fc7(h)))
 		return self.fc8(h)
@@ -66,9 +74,6 @@ class BaseVGG(chainer.Chain):
 			self.conv4_1 = L.Convolution2D(256, 512, 3, 1, 1)
 			self.conv4_2 = L.Convolution2D(512, 512, 3, 1, 1)
 			self.conv4_3 = L.Convolution2D(512, 512, 3, 1, 1)
-			self.conv5_1 = L.Convolution2D(512, 512, 3, 1, 1)
-			self.conv5_2 = L.Convolution2D(512, 512, 3, 1, 1)
-			self.conv5_3 = L.Convolution2D(512, 512, 3, 1, 1)
 
 	def __call__(self,x):
 		h = F.relu(self.conv1_1(x))
@@ -89,11 +94,6 @@ class BaseVGG(chainer.Chain):
 		h = F.relu(self.conv4_3(h))
 		h = F.max_pooling_2d(h, ksize=2, stride=2)
 
-		h = F.relu(self.conv5_1(h))
-		h = F.relu(self.conv5_2(h))
-		h = F.relu(self.conv5_3(h))
-		h = F.max_pooling_2d(h, ksize=2, stride=2)
-
 		return h
 
 model = VGG()
@@ -104,9 +104,6 @@ if gpuId >= 0:
 optimizer = chainer.optimizers.MomentumSGD()
 optimizer.setup(model)
 model.base.disable_update()
-#model.conv5_1.disable_update()
-#model.conv5_2.disable_update()
-#model.conv5_3.disable_update()
 model = L.Classifier(model)
 
 updater = training.StandardUpdater(trainIter, optimizer, device=gpuId)
@@ -114,7 +111,8 @@ trainer = training.Trainer(updater, (maxEpoch, 'epoch'), out='result')
 trainer.extend(extensions.LogReport())
 trainer.extend(extensions.snapshot(filename='snapshot_epoch-{.updater.epoch}'))
 trainer.extend(extensions.PrintReport(['epoch', 'main/loss', 'main/accuracy', 'val/main/loss', 'val/main/accuracy', 'l1/W/data/std', 'elapsed_time']))
+trainer.extend(extensions.PlotReport(['l1/W/data/std'], x_key='epoch', file_name='std.png'))
 trainer.extend(extensions.PlotReport(['main/loss', 'val/main/loss'], x_key='epoch', file_name='loss.png'))
+trainer.extend(extensions.PlotReport(['main/accuracy', 'val/main/accuracy'], x_key='epoch', file_name='accuracy.png'))
 trainer.extend(extensions.dump_graph('main/loss'))
 trainer.run()
-
