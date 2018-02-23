@@ -10,6 +10,6 @@ print(fileNameSet[0])
 f = open('dataset.txt','w')
 
 for i in range(0,len(fileNameSet)):
-	f.write(datasetURL+fileNameSet[i]+' '+brandLabelSet[i]+'\n')
+	f.write(datasetURL+fileNameSet[i]+'　'+brandLabelSet[i]+'\n')
 f.close
 

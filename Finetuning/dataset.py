@@ -14,4 +14,5 @@ class Dataset:
 	def normarize(self,data):
 		img,label = data
 		img = img/255.
+		label = label
 		return img,label
