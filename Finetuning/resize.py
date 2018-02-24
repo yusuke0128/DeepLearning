@@ -9,5 +9,5 @@ fileNameSet = np.array(dataFl['file'].values,dtype=str)
 
 for i in range(0,len(fileNameSet)):
 	img = cv2.imread(datasetURL+fileNameSet[i])
-	img = cv2.resize(img,(50,50resize.py))
+	img = cv2.resize(img,(120,120))
 	cv2.imwrite(outDatasetURL+fileNameSet[i],img)
